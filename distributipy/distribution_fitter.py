@@ -37,7 +37,7 @@ class DistributionFitter:
 
         # Make sure n_bins is larger than 10
         if n_bins < 10:
-            raise TypeError("Argument for parameter 'n_bins' must be at least 10.")
+            n_bins = 10
 
         # Resize n_bins if it is too large
         if n_bins > len(data):
@@ -62,9 +62,11 @@ class DistributionFitter:
 
         # Check if distribution is valid
         if distribution not in _get_distributions():
-            raise TypeError("Argument '{0}' for parameter 'distribution' is not a valid distribution. Please use a scipy.stats distribution object.".format(
-                distribution,
-            ))
+            raise TypeError(
+                """Argument '{0}' for parameter 'distribution' is not a valid distribution.
+                Run _get_distributions() to get a list of all supported distributions.""".format(
+                    distribution,
+                ))
 
         # Get histogram and bin_edges of data
         histogram, bin_edges = np.histogram(self.data, bins=self.n_bins, density=True)
@@ -104,11 +106,11 @@ class DistributionFitter:
         # Catch all exceptions and print them if verbose is True
         except Exception as e:
             if self.verbose:
-                print("Error at distribution '{0}':".format(distribution.name), e)
+                print("Error at distribution '{0}': ".format(distribution.name), e)
 
             return None
 
-    def best_n_fitting(self, n):
+    def best_n_fitting(self, n=5):
         """
         Fit 89 scipy.stats distributions to the data. Return the n best distributions in terms of their SSE.
 
@@ -121,7 +123,7 @@ class DistributionFitter:
         """
 
         if n < 1:
-            raise TypeError("Argument for parameter 'n' must be at least 1.")
+            n = 1
 
         # Initialize results object
         fitted = _FittedDistributions(data=self.data)
@@ -193,7 +195,8 @@ class _FittedDistribution:
 
         # Set default title
         if title == 'default':
-            title = "Histogram of {0} with the theoretical distribution {1}.\nSD: {2}, Mean: {3}, Additional parameters: {4}.".format(
+            title = """Histogram of {0} with the theoretical distribution {1}.\n
+            SD: {2}, Mean: {3}, Additional parameters: {4}.""".format(
                 x_label,
                 self.distribution.name.capitalize(),
                 round(self.standard_deviation, 2),
@@ -220,9 +223,9 @@ class _FittedDistribution:
         ax.set_xlabel(xlabel=x_label)
         ax.set_ylabel(ylabel=y_label)
 
-    def probability_x_smaller_equal(self, value):
+    def probability_x_less_equal(self, value):
         """
-        Get the probability of a random sample of the fitted distribution being smaller or equal the given value.
+        Get the probability of a random sample of the fitted distribution being less or equal the given value.
         Calls the cumulative distribution function (CDF).
 
         :param value:       Array_like. Defines the values for which the probability will be returned.
@@ -230,11 +233,14 @@ class _FittedDistribution:
         :return:            1-dimensional numpy array. Contains the probability values.
 
         """
-        return self.distribution.cdf(value, *[self.arg, self.mean, self.standard_deviation])
+        if len(self.arg) > 0:
+            return self.distribution.cdf(value, *[self.arg, self.mean, self.standard_deviation])
+        else:
+            return self.distribution.cdf(value, *[self.mean, self.standard_deviation])
 
-    def probability_x_larger_equal(self, value):
+    def probability_x_greater_equal(self, value):
         """
-        Get the probability of a random sample of the fitted distribution being larger or equal the given value.
+        Get the probability of a random sample of the fitted distribution being greater or equal the given value.
         Calls the survival function (SF), a.k.a. complemaentary cumulative distribution function.
 
         :param value:       Array_like. Defines the values for which the probability will be returned.
@@ -242,7 +248,10 @@ class _FittedDistribution:
         :return:            1-dimensional numpy array. Contains the probability values.
 
         """
-        return self.distribution.sf(value, *[self.arg, self.mean, self.standard_deviation])
+        if len(self.arg) > 0:
+            return self.distribution.sf(value, *[self.arg, self.mean, self.standard_deviation])
+        else:
+            return self.distribution.sf(value, *[self.mean, self.standard_deviation])
 
     def value_for_probability_x(self, probability):
         """
@@ -254,7 +263,10 @@ class _FittedDistribution:
         :return:                1-dimensional numpy array. Contains the respective values.
 
         """
-        return self.distribution.ppf(probability, *[self.arg, self.mean, self.standard_deviation])
+        if len(self.arg) > 0:
+            return self.distribution.ppf(probability, *[self.arg, self.mean, self.standard_deviation])
+        else:
+            return self.distribution.ppf(probability, *[self.mean, self.standard_deviation])
 
 
 class _FittedDistributions:
