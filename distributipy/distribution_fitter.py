@@ -32,7 +32,7 @@ class DistributionFitter:
         """
 
         # Convert data to pandas.Series if it is a numpy ndarray
-        if type(data) is np.ndarray:
+        if isinstance(data, np.ndarray):
             data = pd.Series(data)
 
         # Make sure n_bins is larger than 10
@@ -220,7 +220,7 @@ class _FittedDistribution:
 
         # Set title and labels
         ax.set_title(title)
-        ax.set_xlabel(xlabel=x_label)
+        ax.set_xlabel(xlabel=str.title(x_label))
         ax.set_ylabel(ylabel=y_label)
 
     def probability_x_less_equal(self, value):
@@ -322,7 +322,7 @@ class _FittedDistributions:
 
         # Set title and labels
         ax.set_title(title)
-        ax.set_xlabel(xlabel=x_label)
+        ax.set_xlabel(xlabel=str.title(x_label))
         ax.set_ylabel(ylabel=y_label)
 
 
