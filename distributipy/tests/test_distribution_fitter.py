@@ -1,6 +1,5 @@
 import unittest
-import numpy as np
-import scipy.stats as st
+
 from distributipy.distribution_fitter import *
 
 
@@ -67,3 +66,7 @@ class TestDistributionFitter(unittest.TestCase):
 
         self.assertIsNotNone(fitted_distributions.distributions)
         self.assertAlmostEqual(len(fitted_distributions.distributions), 89, delta=5)
+
+
+if __name__ == '__main__':
+    unittest.main()

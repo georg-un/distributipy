@@ -1,5 +1,7 @@
 import unittest
+
 import numpy as np
+
 from distributipy.distribution_checks import *
 
 
@@ -37,3 +39,7 @@ class TestDistributionChecks(unittest.TestCase):
         data = np.random.normal(size=100)
         with self.assertRaises(TypeError):
             is_not_normally_distributed(data, mode="foobar")
+
+
+if __name__ == '__main__':
+    unittest.main()
