@@ -1,2 +1,6 @@
 
 \.idea/
+
+distributipy/__pycache__/
+
+distributipy/tests/__pycache__/
