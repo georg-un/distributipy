@@ -14,7 +14,7 @@ class DistributionFitter:
     Use it for a single distribution to plot it's density function or to predict the probability of a specific value:
     fit(distribution)
 
-    Or use it to find the best fitting distribution in a set of 89 theoretical distributions:
+    Or use it to find the best fitting distribution in a set of 88 theoretical distributions:
     best_n_fitting(n)
 
 
@@ -23,7 +23,7 @@ class DistributionFitter:
 
     """
 
-    def __init__(self, data, n_bins=200, verbose=False):
+    def __init__(self, data, n_bins=0, verbose=False):
         """
         :param data:        1-dimensional numpy array, pandas Series or pandas Dataframe.
         :param n_bins:      Integer (at least 10). Defines the number of bins for the histogram and the precision.
@@ -35,18 +35,38 @@ class DistributionFitter:
         if isinstance(data, np.ndarray):
             data = pd.Series(data)
 
+        # Set n_bins to the actual default value (20% of data-size)
+        if n_bins == 0:
+            n_bins = data.shape[0] // 5
+
         # Make sure n_bins is larger than 10
         if n_bins < 10:
             n_bins = 10
 
         # Resize n_bins if it is too large
-        if n_bins > len(data):
-            n_bins = len(data)
+        if n_bins > data.shape[0]:
+            n_bins = data.shape[0]
 
         # Assign input variables to object
         self.data = data
         self.n_bins = n_bins
         self.verbose = verbose
+
+        # Define result property
+        self.fitted_distributions = []
+        self.theoretical_distributions = [
+            st.alpha, st.anglit, st.arcsine, st.beta, st.betaprime, st.bradford, st.burr, st.cauchy, st.chi, st.chi2,
+            st.cosine, st.dgamma, st.dweibull, st.erlang, st.expon, st.exponnorm, st.exponweib, st.exponpow, st.f,
+            st.fatiguelife, st.fisk, st.foldcauchy, st.foldnorm, st.frechet_r, st.frechet_l, st.genlogistic,
+            st.genpareto, st.gennorm, st.genexpon, st.genextreme, st.gausshyper, st.gamma, st.gengamma,
+            st.genhalflogistic, st.gilbrat, st.gompertz, st.gumbel_r, st.gumbel_l, st.halfcauchy, st.halflogistic,
+            st.halfnorm, st.halfgennorm, st.hypsecant, st.invgamma, st.invgauss, st.invweibull, st.johnsonsb,
+            st.johnsonsu, st.ksone, st.kstwobign, st.laplace, st.levy, st.levy_l, st.logistic, st.loggamma,
+            st.loglaplace, st.lognorm, st.lomax, st.maxwell, st.mielke, st.nakagami, st.ncx2, st.ncf, st.nct, st.norm,
+            st.pareto, st.pearson3, st.powerlaw, st.powerlognorm, st.powernorm, st.rdist, st.reciprocal, st.rayleigh,
+            st.rice, st.recipinvgauss, st.semicircular, st.t, st.triang, st.truncexpon, st.truncnorm, st.tukeylambda,
+            st.uniform, st.vonmises, st.vonmises_line, st.wald, st.weibull_min, st.weibull_max, st.wrapcauchy
+        ]
 
     def fit(self, distribution):
         """
@@ -61,10 +81,10 @@ class DistributionFitter:
         """
 
         # Check if distribution is valid
-        if distribution not in _get_distributions():
+        if distribution not in self.theoretical_distributions:
             raise TypeError(
                 """Argument '{0}' for parameter 'distribution' is not a valid distribution.
-                Run _get_distributions() to get a list of all supported distributions.""".format(
+                See the property theoretical_distributions to get a list of all supported distributions.""".format(
                     distribution,
                 ))
 
@@ -98,19 +118,17 @@ class DistributionFitter:
                                                           mean=mean,
                                                           arg=arg,
                                                           parameters=parameters,
-                                                          sse=sse,
-                                                          data=self.data)
+                                                          sse=sse)
 
-                return fitted_distribution
+                if fitted_distribution is not None:
+                    self.fitted_distributions.append(fitted_distribution)
 
         # Catch all exceptions and print them if verbose is True
         except Exception as e:
             if self.verbose:
                 print("Error at distribution '{0}': ".format(distribution.name), e)
 
-            return None
-
-    def best_n_fitting(self, n=5, verbose=True):
+    def fit_all(self, n=88, verbose=True):
         """
         Fit 88 scipy.stats distributions to the data. Return the n best distributions in terms of their SSE.
 
@@ -127,32 +145,66 @@ class DistributionFitter:
         if n < 1:
             n = 1
 
-        # Initialize results object
-        fitted = _FittedDistributions(data=self.data)
-
         # Estimate fit for each distribution
-        for idx, distribution in enumerate(_get_distributions()):
+        for idx, distribution in enumerate(self.theoretical_distributions):
             if verbose:
-                print(str(idx+1) + "/" + str(len(_get_distributions())) +
+                print(str(idx+1) + "/" + str(len(self.theoretical_distributions)) +
                       " Fitting distribution " + distribution.name + " ...")
 
-            # Get fitting results for distribution
-            distribution_fit = self.fit(distribution)
-
-            # Write results to results-list
-            if distribution_fit is not None:
-                fitted.distributions.append(distribution_fit)
+            # Fit distribution
+            self.fit(distribution)
 
         # Sort ascending by SSE
-        fitted.distributions.sort(key=lambda item: item.sse)
+        self.fitted_distributions.sort(key=lambda item: item.sse)
 
         # Make sure n is not larger than the number of fitted distributions
-        if n > len(fitted.distributions):
-            n = len(fitted.distributions)
+        if n > len(self.fitted_distributions):
+            n = len(self.fitted_distributions)
 
         # Keep only the best n results and return them
-        fitted.distributions = fitted.distributions[0:n]
-        return fitted
+        self.fitted_distributions = self.fitted_distributions[0:n]
+
+    def plot(self, x_label, title='default', y_label='Frequency', legend=True, best_n=5):
+        """
+        Plot a histogram of the data and the probability density functions of the n best fitting distributions.
+
+        :param x_label:         String. Title of the x-axis.
+        :param title:           String. Title of the plot. If 'default', the default title will be used.
+        :param y_label:         String. Title of the y-axis.
+        :param legend:          Boolean. Defines if a legend will be shown.
+        :param best_n           Integer. Number of distributions to plot.
+
+        """
+
+        # Make sure best_n is not higher than the number of fitted distributions
+        if best_n > len(self.fitted_distributions):
+            best_n = len(self.fitted_distributions)
+
+        # Set default title
+        if title == 'default':
+            title = "Comparison between the best {0} fitting distributions.".format(best_n)
+
+        # Create main plot
+        plt.figure(figsize=(12, 8))
+        ax = self.data.plot(kind='hist', bins=50, normed=True, alpha=0.5, label='Data', legend=legend)
+        y_lim = (ax.get_ylim()[0], ax.get_ylim()[1] * 1.2)
+        x_lim = ax.get_xlim()
+
+        # Plot the best n distributions
+        best_n_distributions = self.fitted_distributions[0:best_n]
+        for fitted_distribution in best_n_distributions:
+            # Get PDF and plot it
+            pdf = fitted_distribution.get_pdf()
+            pdf.plot(lw=2, label=fitted_distribution.distribution.name.capitalize(), legend=legend, ax=ax)
+
+        # Set focus on histogram
+        plt.ylim(y_lim)
+        plt.xlim(x_lim)
+
+        # Set title and labels
+        ax.set_title(title)
+        ax.set_xlabel(xlabel=str.title(x_label))
+        ax.set_ylabel(ylabel=y_label)
 
 
 class _FittedDistribution:
@@ -161,7 +213,7 @@ class _FittedDistribution:
 
     """
 
-    def __init__(self, distribution, standard_deviation, mean, arg, parameters, sse, data):
+    def __init__(self, distribution, standard_deviation, mean, arg, parameters, sse):
         """
         :param distribution:            A scipy.stats distribution object
         :param standard_deviation:      Float. Standard deviation of the fitted distribution.
@@ -169,7 +221,6 @@ class _FittedDistribution:
         :param arg:                     Tuple or list. Additional parameters of the fitted distribution.
         :param parameters:              List of standard_deviation, mean and arg
         :param sse:                     Float. Sum of squared errors of the fitted distribution.
-        :param data:                    1-dimensional pandas Series or DataFrame
         """
 
         # Assign input to object variables
@@ -179,12 +230,12 @@ class _FittedDistribution:
         self.arg = arg
         self.parameters = parameters
         self.sse = sse
-        self.data = data
 
-    def plot(self, x_label, title='default', y_label='Frequency', legend=True):
+    def plot(self, data, x_label, title='default', y_label='Frequency', legend=True):
         """
         Plot a histogram of the data and the probability density function of the fitted distribution.
 
+        :param data:            The original data the distribution was fitted on.
         :param x_label:         String. Title of the x-axis.
         :param title:           String. Title of the plot. If 'default', the default title will be used.
         :param y_label:         String. Title of the y-axis.
@@ -211,12 +262,12 @@ class _FittedDistribution:
 
         # Create main plot
         plt.figure(figsize=(12, 8))
-        ax = self.data.plot(kind='hist', bins=50, normed=True, alpha=0.5, label='Data', legend=legend)
+        ax = data.plot(kind='hist', bins=50, normed=True, alpha=0.5, label='Data', legend=legend)
         y_lim = (ax.get_ylim()[0], ax.get_ylim()[1] * 1.2)
         x_lim = ax.get_xlim()
 
         # Get probability density function and plot it
-        pdf = _get_pdf(distribution=self.distribution, parameters=self.parameters)
+        pdf = self.get_pdf()
         pdf.plot(lw=2, label=self.distribution.name.capitalize(), legend=legend, ax=ax)
 
         # Set focus on histogram
@@ -273,125 +324,27 @@ class _FittedDistribution:
         else:
             return self.distribution.ppf(probability, *[self.mean, self.standard_deviation])
 
-
-class _FittedDistributions:
-    """
-    Class for multiple fitted distributions.
-
-    """
-
-    def __init__(self, data):
+    def get_pdf(self, size=1000):
         """
-        :param data:        1-dimensional pandas Series or DataFrame.
+        Generate the probability density function of a distribution.
+
+        :param size:            Integer. Number of data points to generate.
+
+        :return:                pandas Series of shape (1000,). Contains the PDF y values for each X.
 
         """
 
-        self.distributions = []
-        self.data = data
+        # Get start and end points of distribution
+        if self.arg:
+            start = self.distribution.ppf(0.01, *self.arg, loc=self.mean, scale=self.standard_deviation)
+            end = self.distribution.ppf(0.99, *self.arg, loc=self.mean, scale=self.standard_deviation)
+        else:
+            start = self.distribution.ppf(0.01, loc=self.mean, scale=self.standard_deviation)
+            end = self.distribution.ppf(0.99, loc=self.mean, scale=self.standard_deviation)
 
-    def plot(self, x_label, title='default', y_label='Frequency', legend=True):
-        """
-        Plot a histogram of the data and the probability density functions of the n best fitting distributions.
+        # Build PDF and turn into pandas Series
+        x = np.linspace(start, end, size)
+        y = self.distribution.pdf(x, loc=self.mean, scale=self.standard_deviation, *self.arg)
+        pdf = pd.Series(y, x)
 
-        :param x_label:         String. Title of the x-axis.
-        :param title:           String. Title of the plot. If 'default', the default title will be used.
-        :param y_label:         String. Title of the y-axis.
-        :param legend:          Boolean. Defines if a legend will be shown.
-
-        """
-
-        # Set default title
-        if title == 'default':
-            title = "Comparison between the best {0} fitting distributions.".format(len(self.distributions))
-
-        # Create main plot
-        plt.figure(figsize=(12, 8))
-        ax = self.data.plot(kind='hist', bins=50, normed=True, alpha=0.5, label='Data', legend=legend)
-        y_lim = (ax.get_ylim()[0], ax.get_ylim()[1] * 1.2)
-        x_lim = ax.get_xlim()
-
-        # Plot the best n distributions
-        for index in range(0, len(self.distributions)):
-            # Get distribution and parameter
-            distribution = self.distributions[index].distribution
-            distribution_name = distribution.name
-            parameters = self.distributions[index].parameters
-
-            # Get PDF and plot it
-            pdf = _get_pdf(distribution=distribution, parameters=parameters)
-            pdf.plot(lw=2, label=distribution_name.capitalize(), legend=legend, ax=ax)
-
-        # Set focus on histogram
-        plt.ylim(y_lim)
-        plt.xlim(x_lim)
-
-        # Set title and labels
-        ax.set_title(title)
-        ax.set_xlabel(xlabel=str.title(x_label))
-        ax.set_ylabel(ylabel=y_label)
-
-
-def _get_distributions():
-    """
-    :return:    List of scipy.stats distributions
-
-    This is a modification of the code from the great answer from tmthydvnprt on stackoverflow.com:
-    https://stackoverflow.com/questions/6620471/fitting-empirical-distribution-to-theoretical-ones-with-scipy-python#answer-37616966
-
-    """
-
-    DISTRIBUTIONS = [
-        st.alpha, st.anglit, st.arcsine, st.beta, st.betaprime, st.bradford, st.burr, st.cauchy, st.chi, st.chi2,
-        st.cosine, st.dgamma, st.dweibull, st.erlang, st.expon, st.exponnorm, st.exponweib, st.exponpow, st.f,
-        st.fatiguelife, st.fisk, st.foldcauchy, st.foldnorm, st.frechet_r, st.frechet_l, st.genlogistic, st.genpareto,
-        st.gennorm, st.genexpon, st.genextreme, st.gausshyper, st.gamma, st.gengamma, st.genhalflogistic, st.gilbrat,
-        st.gompertz, st.gumbel_r, st.gumbel_l, st.halfcauchy, st.halflogistic, st.halfnorm, st.halfgennorm,
-        st.hypsecant, st.invgamma, st.invgauss, st.invweibull, st.johnsonsb, st.johnsonsu, st.ksone, st.kstwobign,
-        st.laplace, st.levy, st.levy_l, st.logistic, st.loggamma, st.loglaplace, st.lognorm, st.lomax,
-        st.maxwell, st.mielke, st.nakagami, st.ncx2, st.ncf, st.nct, st.norm, st.pareto, st.pearson3, st.powerlaw,
-        st.powerlognorm, st.powernorm, st.rdist, st.reciprocal, st.rayleigh, st.rice, st.recipinvgauss, st.semicircular,
-        st.t, st.triang, st.truncexpon, st.truncnorm, st.tukeylambda, st.uniform, st.vonmises, st.vonmises_line,
-        st.wald, st.weibull_min, st.weibull_max, st.wrapcauchy
-    ]
-
-    return DISTRIBUTIONS
-
-
-def _get_pdf(distribution, parameters, size=1000):
-    """
-    Generate the probability density function of a distribution.
-
-    :param dist:        A scipy.stats distribution
-    :param params:      Tuple or list of floats. Parameters from fitted distribution.
-    :param size:        Integer. Number of data points to generate.
-
-    :return:            pandas Series of shape (1000,). Contains the PDF y values for each X.
-
-
-    This is a modification of the code from the great answer from tmthydvnprt on stackoverflow.com:
-    https://stackoverflow.com/questions/6620471/fitting-empirical-distribution-to-theoretical-ones-with-scipy-python#answer-37616966
-
-    """
-
-    if distribution not in _get_distributions():
-        raise TypeError("Distribution must be a scipy.stats distribution and defined in _get_distributions().")
-
-    # Extract parameters
-    arg = parameters[:-2]
-    mean = parameters[-2]
-    standard_deviation = parameters[-1]
-
-    # Get start and end points of distribution
-    if arg:
-        start = distribution.ppf(0.01, *arg, loc=mean, scale=standard_deviation)
-        end = distribution.ppf(0.99, *arg, loc=mean, scale=standard_deviation)
-    else:
-        start = distribution.ppf(0.01, loc=mean, scale=standard_deviation)
-        end = distribution.ppf(0.99, loc=mean, scale=standard_deviation)
-
-    # Build PDF and turn into pandas Series
-    x = np.linspace(start, end, size)
-    y = distribution.pdf(x, loc=mean, scale=standard_deviation, *arg)
-    pdf = pd.Series(y, x)
-
-    return pdf
+        return pdf
