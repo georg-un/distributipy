@@ -110,11 +110,13 @@ class DistributionFitter:
 
             return None
 
-    def best_n_fitting(self, n=5):
+    def best_n_fitting(self, n=5, verbose=True):
         """
         Fit 89 scipy.stats distributions to the data. Return the n best distributions in terms of their SSE.
 
         :param n:       Integer (at least 1). Defines the number of distributions to return.
+
+        :param verbose: Boolean. Defines the verbosity.
 
         :return:        An object of class _Fitted_Distributions which contains n objects of class _Fitted_Distribution.
                         All contain the respective distribution, the fitted distribution parameters, the sum of squared
@@ -129,7 +131,10 @@ class DistributionFitter:
         fitted = _FittedDistributions(data=self.data)
 
         # Estimate fit for each distribution
-        for distribution in _get_distributions():
+        for idx, distribution in enumerate(_get_distributions()):
+            if verbose:
+                print(str(idx+1) + "/" + str(len(_get_distributions())) +
+                      " Fitting distribution " + distribution.name + " ...")
 
             # Get fitting results for distribution
             distribution_fit = self.fit(distribution)
