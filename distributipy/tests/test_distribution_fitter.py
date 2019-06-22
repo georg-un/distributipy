@@ -11,18 +11,18 @@ class TestDistributionFitter(unittest.TestCase):
         fitted_distribution = distribution_fitter.fit(st.norm)
 
         self.assertIsNotNone(fitted_distribution)
-        self.assertEquals(fitted_distribution.distribution, st.norm)
+        self.assertEqual(fitted_distribution.distribution, st.norm)
         self.assertAlmostEqual(fitted_distribution.standard_deviation, 5, delta=5)
         self.assertAlmostEqual(fitted_distribution.mean, 250, delta=20)
-        self.assertEquals(len(fitted_distribution.arg), 0)
-        self.assertNotEquals(fitted_distribution.sse, 0.0)
+        self.assertEqual(len(fitted_distribution.arg), 0)
+        self.assertNotEqual(fitted_distribution.sse, 0.0)
 
     def test_normal_distribution_probability_x_less(self):
         data = np.random.normal(loc=250, scale=5, size=500)
         distribution_fitter = DistributionFitter(data=data, n_bins=125)
         fitted_distribution = distribution_fitter.fit(st.norm)
 
-        self.assertAlmostEquals(fitted_distribution.probability_x_less_equal(250), 0.5, delta=10)
+        self.assertAlmostEqual(fitted_distribution.probability_x_less_equal(250), 0.5, delta=10)
         self.assertGreater(fitted_distribution.probability_x_less_equal(300), 0.95)
         self.assertLess(fitted_distribution.probability_x_less_equal(200), 0.05)
 
@@ -31,7 +31,7 @@ class TestDistributionFitter(unittest.TestCase):
         distribution_fitter = DistributionFitter(data=data, n_bins=125)
         fitted_distribution = distribution_fitter.fit(st.norm)
 
-        self.assertAlmostEquals(fitted_distribution.probability_x_less_equal(250), 0.5, delta=10)
+        self.assertAlmostEqual(fitted_distribution.probability_x_less_equal(250), 0.5, delta=10)
         self.assertGreater(fitted_distribution.probability_x_less_equal(300), 0.95)
         self.assertLess(fitted_distribution.probability_x_less_equal(200), 0.05)
 
@@ -40,7 +40,7 @@ class TestDistributionFitter(unittest.TestCase):
         distribution_fitter = DistributionFitter(data=data, n_bins=125)
         fitted_distribution = distribution_fitter.fit(st.norm)
 
-        self.assertAlmostEquals(fitted_distribution.probability_x_greater_equal(250), 0.5, delta=10)
+        self.assertAlmostEqual(fitted_distribution.probability_x_greater_equal(250), 0.5, delta=10)
         self.assertLess(fitted_distribution.probability_x_greater_equal(300), 0.05)
         self.assertGreater(fitted_distribution.probability_x_greater_equal(200), 0.95)
 
@@ -57,7 +57,7 @@ class TestDistributionFitter(unittest.TestCase):
         fitted_distributions = distribution_fitter.best_n_fitting(1)
 
         self.assertIsNotNone(fitted_distributions.distributions)
-        self.assertEquals(len(fitted_distributions.distributions), 1)
+        self.assertEqual(len(fitted_distributions.distributions), 1)
 
     def test_find_n_best_fitting_distributions(self):
         data = np.random.normal(loc=250, scale=5, size=500)
