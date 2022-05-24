@@ -57,7 +57,7 @@ class DistributionFitter:
         self.theoretical_distributions = [
             st.alpha, st.anglit, st.arcsine, st.beta, st.betaprime, st.bradford, st.burr, st.cauchy, st.chi, st.chi2,
             st.cosine, st.dgamma, st.dweibull, st.erlang, st.expon, st.exponnorm, st.exponweib, st.exponpow, st.f,
-            st.fatiguelife, st.fisk, st.foldcauchy, st.foldnorm, st.frechet_r, st.frechet_l, st.genlogistic,
+            st.fatiguelife, st.fisk, st.foldcauchy, st.foldnorm, st.genlogistic,
             st.genpareto, st.gennorm, st.genexpon, st.genextreme, st.gausshyper, st.gamma, st.gengamma,
             st.genhalflogistic, st.gilbrat, st.gompertz, st.gumbel_r, st.gumbel_l, st.halfcauchy, st.halflogistic,
             st.halfnorm, st.halfgennorm, st.hypsecant, st.invgamma, st.invgauss, st.invweibull, st.johnsonsb,
@@ -128,9 +128,9 @@ class DistributionFitter:
             if self.verbose:
                 print("Error at distribution '{0}': ".format(distribution.name), e)
 
-    def fit_all(self, n=88, verbose=True):
+    def fit_all(self, n=86, verbose=True):
         """
-        Fit 88 scipy.stats distributions to the data. Return the n best distributions in terms of their SSE.
+        Fit 86 scipy.stats distributions to the data. Return the n best distributions in terms of their SSE.
 
         :param n:       Integer (at least 1). Defines the number of distributions to return.
 
