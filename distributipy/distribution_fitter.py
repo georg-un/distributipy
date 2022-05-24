@@ -164,6 +164,12 @@ class DistributionFitter:
         # Keep only the best n results and return them
         self.fitted_distributions = self.fitted_distributions[0:n]
 
+    def get_best(self):
+        return self.fitted_distributions[0]
+
+    def get_best_n(self, n):
+        return self.fitted_distributions[0:n]
+
     def plot(self, x_label, title='default', y_label='Frequency', legend=True, best_n=5):
         """
         Plot a histogram of the data and the probability density functions of the n best fitting distributions.
@@ -186,7 +192,7 @@ class DistributionFitter:
 
         # Create main plot
         plt.figure(figsize=(12, 8))
-        ax = self.data.plot(kind='hist', bins=50, normed=True, alpha=0.5, label='Data', legend=legend)
+        ax = self.data.plot(kind='hist', bins=50, density=True, alpha=0.5, label='Data', legend=legend)
         y_lim = (ax.get_ylim()[0], ax.get_ylim()[1] * 1.2)
         x_lim = ax.get_xlim()
 
@@ -203,7 +209,7 @@ class DistributionFitter:
 
         # Set title and labels
         ax.set_title(title)
-        ax.set_xlabel(xlabel=str.title(x_label))
+        ax.set_xlabel(xlabel=x_label)
         ax.set_ylabel(ylabel=y_label)
 
 
