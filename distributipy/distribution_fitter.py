@@ -7,6 +7,149 @@ import scipy.stats as st
 import matplotlib.pyplot as plt
 
 
+class _FittedDistribution:
+    """
+    Class for a single fitted distribution.
+
+    """
+
+    def __init__(self, distribution, standard_deviation, mean, arg, parameters, sse):
+        """
+        :param distribution:            A scipy.stats distribution object
+        :param standard_deviation:      Float. Standard deviation of the fitted distribution.
+        :param mean:                    Float. Mean of the fitted distribution.
+        :param arg:                     Tuple or list. Additional parameters of the fitted distribution.
+        :param parameters:              List of standard_deviation, mean and arg
+        :param sse:                     Float. Sum of squared errors of the fitted distribution.
+        """
+
+        # Assign input to object variables
+        self.distribution = distribution
+        self.standard_deviation = standard_deviation
+        self.mean = mean
+        self.arg = arg
+        self.parameters = parameters
+        self.sse = sse
+
+    def plot(self, data, x_label, title='default', y_label='Frequency', legend=True):
+        """
+        Plot a histogram of the data and the probability density function of the fitted distribution.
+
+        :param data:            The original data the distribution was fitted on.
+        :param x_label:         String. Title of the x-axis.
+        :param title:           String. Title of the plot. If 'default', the default title will be used.
+        :param y_label:         String. Title of the y-axis.
+        :param legend:          Boolean. Defines if a legend will be shown.
+
+        """
+
+        # Get string of additional parameters
+        if len(self.arg) > 0:
+            parameters = str([round(x, 2) for x in self.arg])[1:-1]
+        else:
+            parameters = 'None'
+
+        # Set default title
+        if title == 'default':
+            title = """Histogram of {0} with the theoretical distribution {1}.\n
+            SD: {2}, Mean: {3}, Additional parameters: {4}.""".format(
+                x_label,
+                self.distribution.name.capitalize(),
+                round(self.standard_deviation, 2),
+                round(self.mean, 2),
+                parameters
+            )
+
+        # Create main plot
+        plt.figure(figsize=(12, 8))
+        ax = data.plot(kind='hist', bins=50, normed=True, alpha=0.5, label='Data', legend=legend)
+        y_lim = (ax.get_ylim()[0], ax.get_ylim()[1] * 1.2)
+        x_lim = ax.get_xlim()
+
+        # Get probability density function and plot it
+        pdf = self.get_pdf()
+        pdf.plot(lw=2, label=self.distribution.name.capitalize(), legend=legend, ax=ax)
+
+        # Set focus on histogram
+        plt.ylim(y_lim)
+        plt.xlim(x_lim)
+
+        # Set title and labels
+        ax.set_title(title)
+        ax.set_xlabel(xlabel=str.title(x_label))
+        ax.set_ylabel(ylabel=y_label)
+
+    def probability_x_less_equal(self, value):
+        """
+        Get the probability of a random sample of the fitted distribution being less or equal the given value.
+        Calls the cumulative distribution function (CDF).
+
+        :param value:       Array_like. Defines the values for which the probability will be returned.
+
+        :return:            1-dimensional numpy array. Contains the probability values.
+
+        """
+        if len(self.arg) > 0:
+            return self.distribution.cdf(value, *[self.arg, self.mean, self.standard_deviation])
+        else:
+            return self.distribution.cdf(value, *[self.mean, self.standard_deviation])
+
+    def probability_x_greater_equal(self, value):
+        """
+        Get the probability of a random sample of the fitted distribution being greater or equal the given value.
+        Calls the survival function (SF), a.k.a. complemaentary cumulative distribution function.
+
+        :param value:       Array_like. Defines the values for which the probability will be returned.
+
+        :return:            1-dimensional numpy array. Contains the probability values.
+
+        """
+        if len(self.arg) > 0:
+            return self.distribution.sf(value, *[self.arg, self.mean, self.standard_deviation])
+        else:
+            return self.distribution.sf(value, *[self.mean, self.standard_deviation])
+
+    def value_for_probability_x(self, probability):
+        """
+        Get the value which is needed to provide a probability of x.
+        Calls the percent-point function (PPF), a.k.a. quantile function.
+
+        :param probability:     Array_like. Defines the probability for which the value will be returned.
+
+        :return:                1-dimensional numpy array. Contains the respective values.
+
+        """
+        if len(self.arg) > 0:
+            return self.distribution.ppf(probability, *[self.arg, self.mean, self.standard_deviation])
+        else:
+            return self.distribution.ppf(probability, *[self.mean, self.standard_deviation])
+
+    def get_pdf(self, size=1000):
+        """
+        Generate the probability density function of a distribution.
+
+        :param size:            Integer. Number of data points to generate.
+
+        :return:                pandas Series of shape (1000,). Contains the PDF y values for each X.
+
+        """
+
+        # Get start and end points of distribution
+        if self.arg:
+            start = self.distribution.ppf(0.01, *self.arg, loc=self.mean, scale=self.standard_deviation)
+            end = self.distribution.ppf(0.99, *self.arg, loc=self.mean, scale=self.standard_deviation)
+        else:
+            start = self.distribution.ppf(0.01, loc=self.mean, scale=self.standard_deviation)
+            end = self.distribution.ppf(0.99, loc=self.mean, scale=self.standard_deviation)
+
+        # Build PDF and turn into pandas Series
+        x = np.linspace(start, end, size)
+        y = self.distribution.pdf(x, loc=self.mean, scale=self.standard_deviation, *self.arg)
+        pdf = pd.Series(y, x)
+
+        return pdf
+
+
 class DistributionFitter:
     """
     Fit theoretical distributions to a 1-dimensional data.
@@ -211,146 +354,3 @@ class DistributionFitter:
         ax.set_title(title)
         ax.set_xlabel(xlabel=x_label)
         ax.set_ylabel(ylabel=y_label)
-
-
-class _FittedDistribution:
-    """
-    Class for a single fitted distribution.
-
-    """
-
-    def __init__(self, distribution, standard_deviation, mean, arg, parameters, sse):
-        """
-        :param distribution:            A scipy.stats distribution object
-        :param standard_deviation:      Float. Standard deviation of the fitted distribution.
-        :param mean:                    Float. Mean of the fitted distribution.
-        :param arg:                     Tuple or list. Additional parameters of the fitted distribution.
-        :param parameters:              List of standard_deviation, mean and arg
-        :param sse:                     Float. Sum of squared errors of the fitted distribution.
-        """
-
-        # Assign input to object variables
-        self.distribution = distribution
-        self.standard_deviation = standard_deviation
-        self.mean = mean
-        self.arg = arg
-        self.parameters = parameters
-        self.sse = sse
-
-    def plot(self, data, x_label, title='default', y_label='Frequency', legend=True):
-        """
-        Plot a histogram of the data and the probability density function of the fitted distribution.
-
-        :param data:            The original data the distribution was fitted on.
-        :param x_label:         String. Title of the x-axis.
-        :param title:           String. Title of the plot. If 'default', the default title will be used.
-        :param y_label:         String. Title of the y-axis.
-        :param legend:          Boolean. Defines if a legend will be shown.
-
-        """
-
-        # Get string of additional parameters
-        if len(self.arg) > 0:
-            parameters = str([round(x, 2) for x in self.arg])[1:-1]
-        else:
-            parameters = 'None'
-
-        # Set default title
-        if title == 'default':
-            title = """Histogram of {0} with the theoretical distribution {1}.\n
-            SD: {2}, Mean: {3}, Additional parameters: {4}.""".format(
-                x_label,
-                self.distribution.name.capitalize(),
-                round(self.standard_deviation, 2),
-                round(self.mean, 2),
-                parameters
-            )
-
-        # Create main plot
-        plt.figure(figsize=(12, 8))
-        ax = data.plot(kind='hist', bins=50, normed=True, alpha=0.5, label='Data', legend=legend)
-        y_lim = (ax.get_ylim()[0], ax.get_ylim()[1] * 1.2)
-        x_lim = ax.get_xlim()
-
-        # Get probability density function and plot it
-        pdf = self.get_pdf()
-        pdf.plot(lw=2, label=self.distribution.name.capitalize(), legend=legend, ax=ax)
-
-        # Set focus on histogram
-        plt.ylim(y_lim)
-        plt.xlim(x_lim)
-
-        # Set title and labels
-        ax.set_title(title)
-        ax.set_xlabel(xlabel=str.title(x_label))
-        ax.set_ylabel(ylabel=y_label)
-
-    def probability_x_less_equal(self, value):
-        """
-        Get the probability of a random sample of the fitted distribution being less or equal the given value.
-        Calls the cumulative distribution function (CDF).
-
-        :param value:       Array_like. Defines the values for which the probability will be returned.
-
-        :return:            1-dimensional numpy array. Contains the probability values.
-
-        """
-        if len(self.arg) > 0:
-            return self.distribution.cdf(value, *[self.arg, self.mean, self.standard_deviation])
-        else:
-            return self.distribution.cdf(value, *[self.mean, self.standard_deviation])
-
-    def probability_x_greater_equal(self, value):
-        """
-        Get the probability of a random sample of the fitted distribution being greater or equal the given value.
-        Calls the survival function (SF), a.k.a. complemaentary cumulative distribution function.
-
-        :param value:       Array_like. Defines the values for which the probability will be returned.
-
-        :return:            1-dimensional numpy array. Contains the probability values.
-
-        """
-        if len(self.arg) > 0:
-            return self.distribution.sf(value, *[self.arg, self.mean, self.standard_deviation])
-        else:
-            return self.distribution.sf(value, *[self.mean, self.standard_deviation])
-
-    def value_for_probability_x(self, probability):
-        """
-        Get the value which is needed to provide a probability of x.
-        Calls the percent-point function (PPF), a.k.a. quantile function.
-
-        :param probability:     Array_like. Defines the probability for which the value will be returned.
-
-        :return:                1-dimensional numpy array. Contains the respective values.
-
-        """
-        if len(self.arg) > 0:
-            return self.distribution.ppf(probability, *[self.arg, self.mean, self.standard_deviation])
-        else:
-            return self.distribution.ppf(probability, *[self.mean, self.standard_deviation])
-
-    def get_pdf(self, size=1000):
-        """
-        Generate the probability density function of a distribution.
-
-        :param size:            Integer. Number of data points to generate.
-
-        :return:                pandas Series of shape (1000,). Contains the PDF y values for each X.
-
-        """
-
-        # Get start and end points of distribution
-        if self.arg:
-            start = self.distribution.ppf(0.01, *self.arg, loc=self.mean, scale=self.standard_deviation)
-            end = self.distribution.ppf(0.99, *self.arg, loc=self.mean, scale=self.standard_deviation)
-        else:
-            start = self.distribution.ppf(0.01, loc=self.mean, scale=self.standard_deviation)
-            end = self.distribution.ppf(0.99, loc=self.mean, scale=self.standard_deviation)
-
-        # Build PDF and turn into pandas Series
-        x = np.linspace(start, end, size)
-        y = self.distribution.pdf(x, loc=self.mean, scale=self.standard_deviation, *self.arg)
-        pdf = pd.Series(y, x)
-
-        return pdf
