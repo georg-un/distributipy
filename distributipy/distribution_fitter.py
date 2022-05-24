@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats as st
 import matplotlib.pyplot as plt
+from typing import List, Union
 
 
 class _FittedDistribution:
@@ -13,7 +14,15 @@ class _FittedDistribution:
 
     """
 
-    def __init__(self, distribution, standard_deviation, mean, arg, parameters, sse):
+    def __init__(
+            self,
+            distribution,
+            standard_deviation: float,
+            mean: float,
+            arg: List[Union[float, int]],
+            parameters: List[Union[float, int]],
+            sse: float
+    ) -> None:
         """
         :param distribution:            A scipy.stats distribution object
         :param standard_deviation:      Float. Standard deviation of the fitted distribution.
@@ -31,7 +40,7 @@ class _FittedDistribution:
         self.parameters = parameters
         self.sse = sse
 
-    def plot(self, data, x_label, title='default', y_label='Frequency', legend=True):
+    def plot(self, data, x_label: str, title='default', y_label='Frequency', legend=True) -> None:
         """
         Plot a histogram of the data and the probability density function of the fitted distribution.
 
@@ -62,7 +71,7 @@ class _FittedDistribution:
 
         # Create main plot
         plt.figure(figsize=(12, 8))
-        ax = data.plot(kind='hist', bins=50, normed=True, alpha=0.5, label='Data', legend=legend)
+        ax = data.plot(kind='hist', bins=50, density=True, alpha=0.5, label='Data', legend=legend)
         y_lim = (ax.get_ylim()[0], ax.get_ylim()[1] * 1.2)
         x_lim = ax.get_xlim()
 
@@ -76,10 +85,10 @@ class _FittedDistribution:
 
         # Set title and labels
         ax.set_title(title)
-        ax.set_xlabel(xlabel=str.title(x_label))
+        ax.set_xlabel(xlabel=x_label)
         ax.set_ylabel(ylabel=y_label)
 
-    def probability_x_less_equal(self, value):
+    def probability_x_less_equal(self, value: float) -> Union[float, np.ndarray]:
         """
         Get the probability of a random sample of the fitted distribution being less or equal the given value.
         Calls the cumulative distribution function (CDF).
@@ -94,10 +103,10 @@ class _FittedDistribution:
         else:
             return self.distribution.cdf(value, *[self.mean, self.standard_deviation])
 
-    def probability_x_greater_equal(self, value):
+    def probability_x_greater_equal(self, value: float) -> Union[float, np.ndarray]:
         """
         Get the probability of a random sample of the fitted distribution being greater or equal the given value.
-        Calls the survival function (SF), a.k.a. complemaentary cumulative distribution function.
+        Calls the survival function (SF), a.k.a. complementary cumulative distribution function.
 
         :param value:       Array_like. Defines the values for which the probability will be returned.
 
@@ -109,7 +118,7 @@ class _FittedDistribution:
         else:
             return self.distribution.sf(value, *[self.mean, self.standard_deviation])
 
-    def value_for_probability_x(self, probability):
+    def value_for_probability_x(self, probability: float) -> Union[float, np.ndarray]:
         """
         Get the value which is needed to provide a probability of x.
         Calls the percent-point function (PPF), a.k.a. quantile function.
@@ -124,7 +133,7 @@ class _FittedDistribution:
         else:
             return self.distribution.ppf(probability, *[self.mean, self.standard_deviation])
 
-    def get_pdf(self, size=1000):
+    def get_pdf(self, size=1000) -> pd.Series:
         """
         Generate the probability density function of a distribution.
 
@@ -211,7 +220,7 @@ class DistributionFitter:
             st.uniform, st.vonmises, st.vonmises_line, st.wald, st.weibull_min, st.weibull_max, st.wrapcauchy
         ]
 
-    def fit(self, distribution):
+    def fit(self, distribution) -> None:
         """
         Fit a scipy.stats distribution to the data.
 
@@ -271,7 +280,7 @@ class DistributionFitter:
             if self.verbose:
                 print("Error at distribution '{0}': ".format(distribution.name), e)
 
-    def fit_all(self, n=86, verbose=True):
+    def fit_all(self, n=86, verbose=True) -> None:
         """
         Fit 86 scipy.stats distributions to the data. Return the n best distributions in terms of their SSE.
 
@@ -307,13 +316,13 @@ class DistributionFitter:
         # Keep only the best n results and return them
         self.fitted_distributions = self.fitted_distributions[0:n]
 
-    def get_best(self):
+    def get_best(self) -> _FittedDistribution:
         return self.fitted_distributions[0]
 
-    def get_best_n(self, n):
+    def get_best_n(self, n: int) -> List[_FittedDistribution]:
         return self.fitted_distributions[0:n]
 
-    def plot(self, x_label, title='default', y_label='Frequency', legend=True, best_n=5):
+    def plot(self, x_label: str, title='default', y_label='Frequency', legend=True, best_n=5) -> None:
         """
         Plot a histogram of the data and the probability density functions of the n best fitting distributions.
 
